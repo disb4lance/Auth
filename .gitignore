@@ -1,0 +1,76 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+# Go workspace file
+go.work
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Compiled Object files, Static and Dynamic libs (Shared Objects)
+*.o
+*.a
+*.lib
+
+# Temporary files
+*.tmp
+*.temp
+
+# Log files
+*.log
+
+# Profiling data
+*.prof
+*.prof.*
+
+# Go module files (unless you want to commit them)
+# go.sum is usually committed, go.mod should always be committed
+
+# Optional: ignore the binary output directory
+# Uncomment if you use a specific output directory
+# bin/
+# out/
+# dist/
+
+# Optional: ignore coverage reports
+coverage.txt
+coverage.html
+
+# Optional: ignore local development files
+local.dev
+.devcontainer/
+
+# Optional: ignore Docker build artifacts
+Dockerfile.local
+.dockerignore
