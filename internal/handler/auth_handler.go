@@ -1,17 +1,16 @@
 package handler
 
 import (
+	"auth-service/internal/handler/dto"
+	"auth-service/internal/service"
 	"encoding/json"
 	"net/http"
-
-	"auth-service/internal/service"
 )
 
 type AuthHandler struct {
 	authService service.AuthService
 }
 
-// Конструктор
 func NewAuthHandler(s service.AuthService) *AuthHandler {
 	return &AuthHandler{authService: s}
 }
@@ -22,20 +21,13 @@ func NewAuthHandler(s service.AuthService) *AuthHandler {
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param request body map[string]string true "User info"
+// @Param request body dto.RegisterRequest true "User info"
 // @Success 201 {object} service.UserDTO
 // @Failure 400 {string} string "invalid body"
 // @Router /auth/register [post]
 func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+	var req dto.RegisterRequest
 
-	var req struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid body", http.StatusBadRequest)
 		return
@@ -49,7 +41,7 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(userDTO)
+	_ = json.NewEncoder(w).Encode(userDTO)
 }
 
 // AuthenticateHandler godoc
@@ -58,31 +50,29 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param request body service.Credentials true "User credentials"
+// @Param request body dto.LoginRequest true "User credentials"
 // @Success 200 {object} service.AuthenticatedUser
 // @Failure 401 {string} string "unauthorized"
 // @Router /auth/tokens [post]
 func (h *AuthHandler) AuthenticateHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+	var req dto.LoginRequest
 
-	var creds service.Credentials
-	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid body", http.StatusBadRequest)
 		return
 	}
 
-	authUser, err := h.authService.Authenticate(creds)
+	authUser, err := h.authService.Authenticate(service.Credentials{
+		Email:    req.Email,
+		Password: req.Password,
+	})
 	if err != nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(authUser)
+	_ = json.NewEncoder(w).Encode(authUser)
 }
 
 // RefreshHandler godoc
@@ -91,19 +81,13 @@ func (h *AuthHandler) AuthenticateHandler(w http.ResponseWriter, r *http.Request
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param request body map[string]string true "Refresh token"
+// @Param request body dto.RefreshRequest true "Refresh token"
 // @Success 200 {object} service.AuthenticatedUser
 // @Failure 401 {string} string "invalid refresh token"
 // @Router /auth/refresh [post]
 func (h *AuthHandler) RefreshHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+	var req dto.RefreshRequest
 
-	var req struct {
-		RefreshToken string `json:"refresh_token"`
-	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid body", http.StatusBadRequest)
 		return
@@ -116,6 +100,5 @@ func (h *AuthHandler) RefreshHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(authUser)
+	_ = json.NewEncoder(w).Encode(authUser)
 }

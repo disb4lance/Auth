@@ -35,10 +35,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/dto.RefreshRequest"
                         }
                     }
                 ],
@@ -78,10 +75,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/dto.RegisterRequest"
                         }
                     }
                 ],
@@ -121,7 +115,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/service.Credentials"
+                            "$ref": "#/definitions/dto.LoginRequest"
                         }
                     }
                 ],
@@ -143,6 +137,41 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "dto.LoginRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "test@mail.com"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "qwerty123"
+                }
+            }
+        },
+        "dto.RefreshRequest": {
+            "type": "object",
+            "properties": {
+                "refresh_token": {
+                    "type": "string",
+                    "example": "refresh.jwt.token"
+                }
+            }
+        },
+        "dto.RegisterRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "test@mail.com"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "qwerty123"
+                }
+            }
+        },
         "service.AuthenticatedUser": {
             "type": "object",
             "properties": {
@@ -151,17 +180,6 @@ const docTemplate = `{
                 },
                 "user": {
                     "$ref": "#/definitions/service.UserDTO"
-                }
-            }
-        },
-        "service.Credentials": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
                 }
             }
         },

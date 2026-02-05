@@ -1,17 +1,34 @@
 definitions:
+  dto.LoginRequest:
+    properties:
+      email:
+        example: test@mail.com
+        type: string
+      password:
+        example: qwerty123
+        type: string
+    type: object
+  dto.RefreshRequest:
+    properties:
+      refresh_token:
+        example: refresh.jwt.token
+        type: string
+    type: object
+  dto.RegisterRequest:
+    properties:
+      email:
+        example: test@mail.com
+        type: string
+      password:
+        example: qwerty123
+        type: string
+    type: object
   service.AuthenticatedUser:
     properties:
       token:
         $ref: '#/definitions/service.TokenPair'
       user:
         $ref: '#/definitions/service.UserDTO'
-    type: object
-  service.Credentials:
-    properties:
-      email:
-        type: string
-      password:
-        type: string
     type: object
   service.TokenPair:
     properties:
@@ -41,9 +58,7 @@ paths:
         name: request
         required: true
         schema:
-          additionalProperties:
-            type: string
-          type: object
+          $ref: '#/definitions/dto.RefreshRequest'
       produces:
       - application/json
       responses:
@@ -69,9 +84,7 @@ paths:
         name: request
         required: true
         schema:
-          additionalProperties:
-            type: string
-          type: object
+          $ref: '#/definitions/dto.RegisterRequest'
       produces:
       - application/json
       responses:
@@ -97,7 +110,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/service.Credentials'
+          $ref: '#/definitions/dto.LoginRequest'
       produces:
       - application/json
       responses:

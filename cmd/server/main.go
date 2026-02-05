@@ -3,14 +3,18 @@ package main
 import (
 	_ "auth-service/docs"
 	"auth-service/internal/handler"
+	"auth-service/internal/infrastructure/jwt"
+	"auth-service/internal/infrastructure/security"
 	"auth-service/internal/repository/postgres"
 	"auth-service/internal/service"
 	"context"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	httpSwagger "github.com/swaggo/http-swagger"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func main() {
@@ -25,9 +29,14 @@ func main() {
 	// Репозитории
 	userRepo := postgres.NewUserRepository(db)
 	tokenRepo := postgres.NewRefreshTokenRepository(db)
+	hasher := security.NewBcryptHasher(bcrypt.DefaultCost)
+	jwtSvc := jwt.NewJWTService(
+		"super-secret-key", // secret
+		15*time.Minute,     // access TTL
+	)
 
 	// Сервис
-	authSvc := service.NewAuthService(userRepo, tokenRepo)
+	authSvc := service.NewAuthService(userRepo, tokenRepo, hasher, jwtSvc)
 
 	// Хендлер
 	authHandler := handler.NewAuthHandler(authSvc)
@@ -37,6 +46,7 @@ func main() {
 	mux.HandleFunc("/auth/tokens", authHandler.AuthenticateHandler)
 	mux.HandleFunc("/auth/refresh", authHandler.RefreshHandler)
 	mux.Handle("/swagger/", httpSwagger.WrapHandler)
+
 	log.Println("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }

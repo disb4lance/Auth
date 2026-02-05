@@ -13,28 +13,44 @@ import (
 type authService struct {
 	usersRepo  repository.UserRepository
 	tokensRepo repository.RefreshTokenRepository
+	hasher     PasswordHasher
+	jwt        TokenService
 }
 
-// Конструктор
-func NewAuthService(u repository.UserRepository, t repository.RefreshTokenRepository) AuthService {
+type TokenResponse struct {
+	AccessToken  string    `json:"access_token"`
+	RefreshToken string    `json:"refresh_token"`
+	ExpiresAt    time.Time `json:"expires_at"`
+}
+
+func NewAuthService(
+	u repository.UserRepository,
+	t repository.RefreshTokenRepository,
+	h PasswordHasher,
+	j TokenService,
+) AuthService {
 	return &authService{
 		usersRepo:  u,
 		tokensRepo: t,
+		hasher:     h,
+		jwt:        j,
 	}
 }
 
-// Register — создаёт пользователя
 func (s *authService) Register(email, password string) (*UserDTO, error) {
-	// TODO: bcrypt hash password
+	hash, err := s.hasher.Hash(password)
+	if err != nil {
+		return nil, err
+	}
+
 	user := &model.User{
 		ID:           uuid.New(),
 		Email:        email,
-		PasswordHash: password, // временно plain-text
+		PasswordHash: hash,
 		CreatedAt:    time.Now().UTC(),
 	}
 
-	err := s.usersRepo.Create(user)
-	if err != nil {
+	if err := s.usersRepo.Create(user); err != nil {
 		return nil, err
 	}
 
@@ -44,93 +60,91 @@ func (s *authService) Register(email, password string) (*UserDTO, error) {
 	}, nil
 }
 
-// Authenticate — проверяет credentials и возвращает токены
-func (s *authService) Authenticate(creds Credentials) (*AuthenticatedUser, error) {
+func (s *authService) Authenticate(creds Credentials) (*TokenResponse, error) {
 	user, err := s.usersRepo.GetByEmail(creds.Email)
 	if err != nil {
 		return nil, err
 	}
-	if user == nil || user.PasswordHash != creds.Password {
+
+	if !s.hasher.Compare(user.PasswordHash, creds.Password) {
 		return nil, errors.New("invalid credentials")
 	}
 
-	// TODO: здесь будет генерация JWT
-	tokens := TokenPair{
-		AccessToken:  "access-token-placeholder",
-		RefreshToken: "refresh-token-placeholder",
+	tokens, err := s.jwt.Generate(
+		user.ID.String(),
+		user.Email,
+	)
+	if err != nil {
+		return nil, err
 	}
 
-	// Создаём refresh token в БД
 	rt := &model.RefreshToken{
 		ID:        uuid.New(),
 		UserID:    user.ID,
 		Token:     tokens.RefreshToken,
-		ExpiresAt: time.Now().Add(7 * 24 * time.Hour),
+		ExpiresAt: tokens.ExpiresAt,
 		CreatedAt: time.Now().UTC(),
 		IsRevoked: false,
 	}
 
-	err = s.tokensRepo.Create(rt)
-	if err != nil {
+	if err := s.tokensRepo.Create(rt); err != nil {
 		return nil, err
 	}
 
-	return &AuthenticatedUser{
-		User: UserDTO{
-			ID:    user.ID.String(),
-			Email: user.Email,
-		},
-		Token: tokens,
+	return &TokenResponse{
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+		ExpiresAt:    tokens.ExpiresAt,
 	}, nil
 }
 
-// Refresh — обновляет токены по refresh token
-func (s *authService) Refresh(refreshToken string) (*AuthenticatedUser, error) {
+func (s *authService) Refresh(refreshToken string) (*TokenResponse, error) {
+	// 1. ищем refresh token
 	rt, err := s.tokensRepo.GetByToken(refreshToken)
 	if err != nil {
 		return nil, err
 	}
+
 	if rt == nil || rt.IsRevoked || rt.ExpiresAt.Before(time.Now()) {
 		return nil, errors.New("invalid refresh token")
 	}
 
 	user, err := s.usersRepo.GetByID(rt.UserID)
-	if err != nil || user == nil {
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
 		return nil, errors.New("user not found")
 	}
 
-	// TODO: создать новые JWT
-	newTokens := TokenPair{
-		AccessToken:  "new-access-token-placeholder",
-		RefreshToken: "new-refresh-token-placeholder",
+	tokens, err := s.jwt.Generate(
+		user.ID.String(),
+		user.Email,
+	)
+	if err != nil {
+		return nil, err
 	}
 
-	// сохраняем новый refresh token
 	newRT := &model.RefreshToken{
 		ID:        uuid.New(),
 		UserID:    user.ID,
-		Token:     newTokens.RefreshToken,
-		ExpiresAt: time.Now().Add(7 * 24 * time.Hour),
+		Token:     tokens.RefreshToken,
+		ExpiresAt: tokens.ExpiresAt,
 		CreatedAt: time.Now().UTC(),
 		IsRevoked: false,
 	}
 
-	err = s.tokensRepo.Create(newRT)
-	if err != nil {
+	if err := s.tokensRepo.Create(newRT); err != nil {
 		return nil, err
 	}
 
-	// Отзываем старый токен
-	err = s.tokensRepo.Revoke(rt.ID)
-	if err != nil {
+	if err := s.tokensRepo.Revoke(rt.ID); err != nil {
 		return nil, err
 	}
 
-	return &AuthenticatedUser{
-		User: UserDTO{
-			ID:    user.ID.String(),
-			Email: user.Email,
-		},
-		Token: newTokens,
+	return &TokenResponse{
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+		ExpiresAt:    tokens.ExpiresAt,
 	}, nil
 }

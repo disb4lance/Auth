@@ -12,12 +12,6 @@ type UserDTO struct {
 	Email string `json:"email"`
 }
 
-// DTO для access + refresh
-type TokenPair struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-}
-
 // DTO для ответа после аутентификации
 type AuthenticatedUser struct {
 	User  UserDTO   `json:"user"`
@@ -26,6 +20,6 @@ type AuthenticatedUser struct {
 
 type AuthService interface {
 	Register(email, password string) (*UserDTO, error)
-	Authenticate(creds Credentials) (*AuthenticatedUser, error)
-	Refresh(refreshToken string) (*AuthenticatedUser, error)
+	Authenticate(creds Credentials) (*TokenResponse, error)
+	Refresh(refreshToken string) (*TokenResponse, error)
 }
