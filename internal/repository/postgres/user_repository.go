@@ -4,36 +4,34 @@ import (
 	"context"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	model "auth-service/internal/domain/models"
 	"auth-service/internal/repository"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type PostgresUserRepository struct {
+type UserRepository struct {
 	db *pgxpool.Pool
 }
 
-// Конструктор
-func NewPostgresUserRepository(db *pgxpool.Pool) repository.UserRepository {
-	return &PostgresUserRepository{db: db}
+func NewUserRepository(db *pgxpool.Pool) repository.UserRepository {
+	return &UserRepository{db: db}
 }
 
-// Create вставляет нового пользователя
-func (r *PostgresUserRepository) Create(user *model.User) error {
+func (r *UserRepository) Create(user *model.User) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	_, err := r.db.Exec(ctx,
 		"INSERT INTO users (id, email, password_hash, created_at) VALUES ($1, $2, $3, $4)",
-		user.Id, user.Email, user.PasswordHash, user.CreatedAt,
+		user.ID, user.Email, user.PasswordHash, user.CreatedAt,
 	)
 	return err
 }
 
-// GetByID возвращает пользователя по ID
-func (r *PostgresUserRepository) GetByID(id uuid.UUID) (*model.User, error) {
+func (r *UserRepository) GetByID(id uuid.UUID) (*model.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -44,16 +42,18 @@ func (r *PostgresUserRepository) GetByID(id uuid.UUID) (*model.User, error) {
 		id,
 	)
 
-	err := row.Scan(&user.Id, &user.Email, &user.PasswordHash, &user.CreatedAt)
+	err := row.Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt)
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
 		return nil, err
 	}
 
 	return &user, nil
 }
 
-// GetByEmail возвращает пользователя по email
-func (r *PostgresUserRepository) GetByEmail(email string) (*model.User, error) {
+func (r *UserRepository) GetByEmail(email string) (*model.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -64,22 +64,13 @@ func (r *PostgresUserRepository) GetByEmail(email string) (*model.User, error) {
 		email,
 	)
 
-	err := row.Scan(&user.Id, &user.Email, &user.PasswordHash, &user.CreatedAt)
+	err := row.Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt)
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
 		return nil, err
 	}
 
 	return &user, nil
-}
-
-// Delete удаляет пользователя по ID
-func (r *PostgresUserRepository) Delete(id uuid.UUID) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	_, err := r.db.Exec(ctx,
-		"DELETE FROM users WHERE id = $1",
-		id,
-	)
-	return err
 }
