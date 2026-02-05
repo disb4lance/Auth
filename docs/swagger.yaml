@@ -1,0 +1,115 @@
+definitions:
+  service.AuthenticatedUser:
+    properties:
+      token:
+        $ref: '#/definitions/service.TokenPair'
+      user:
+        $ref: '#/definitions/service.UserDTO'
+    type: object
+  service.Credentials:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  service.TokenPair:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+    type: object
+  service.UserDTO:
+    properties:
+      email:
+        type: string
+      id:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refresh access and refresh tokens
+      parameters:
+      - description: Refresh token
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.AuthenticatedUser'
+        "401":
+          description: invalid refresh token
+          schema:
+            type: string
+      summary: Refresh JWT token
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user with email and password
+      parameters:
+      - description: User info
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/service.UserDTO'
+        "400":
+          description: invalid body
+          schema:
+            type: string
+      summary: Register a new user
+      tags:
+      - auth
+  /auth/tokens:
+    post:
+      consumes:
+      - application/json
+      description: Login user and return tokens
+      parameters:
+      - description: User credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.Credentials'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.AuthenticatedUser'
+        "401":
+          description: unauthorized
+          schema:
+            type: string
+      summary: Authenticate user
+      tags:
+      - auth
+swagger: "2.0"
