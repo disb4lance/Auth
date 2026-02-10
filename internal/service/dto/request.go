@@ -1,5 +1,10 @@
 package dto
 
+type Credentials struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 // RegisterRequest
 type RegisterRequest struct {
 	Email    string `json:"email" example:"test@mail.com"`
