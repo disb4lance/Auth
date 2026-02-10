@@ -2,7 +2,7 @@
 package jwt
 
 import (
-	"auth-service/internal/service"
+	"auth-service/internal/pkg/pkg_dto"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -27,7 +27,7 @@ func NewJWTService(secret string, accessTTL time.Duration) *JWTService {
 	}
 }
 
-func (s *JWTService) Generate(userID, email string) (*service.TokenPair, error) {
+func (s *JWTService) Generate(userID, email string) (*pkg_dto.TokenPair, error) {
 	now := time.Now()
 
 	claims := AccessClaims{
@@ -44,7 +44,7 @@ func (s *JWTService) Generate(userID, email string) (*service.TokenPair, error) 
 		return nil, err
 	}
 
-	return &service.TokenPair{
+	return &pkg_dto.TokenPair{
 		AccessToken:  accessToken,
 		RefreshToken: uuid.NewString(),
 		ExpiresAt:    claims.ExpiresAt.Time,

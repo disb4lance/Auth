@@ -1,33 +1,165 @@
-// package service
+package service
 
-// import "time"
+import (
+	model "auth-service/internal/domain/models"
+	"auth-service/internal/pkg/pkg_dto"
+	"auth-service/internal/service/dto"
+	"errors"
+	"time"
 
-// // DTO для входа
-// type Credentials struct {
-// 	Email    string `json:"email"`
-// 	Password string `json:"password"`
-// }
+	"github.com/google/uuid"
+)
 
-// // возвращаем клиенту только безопасные поля
-// type UserDTO struct {
-// 	ID    string `json:"id"`
-// 	Email string `json:"email"`
-// }
+type PasswordHasher interface {
+	Hash(password string) (string, error)
+	Compare(hash, password string) bool
+}
 
-// // DTO для ответа после аутентификации
-// type AuthenticatedUser struct {
-// 	User  UserDTO   `json:"user"`
-// 	Token TokenPair `json:"token"`
-// }
+type TokenService interface {
+	Generate(userID, email string) (*pkg_dto.TokenPair, error)
+}
 
-// type TokenPair struct {
-// 	AccessToken  string    `json:"access_token"`
-// 	RefreshToken string    `json:"refresh_token"`
-// 	ExpiresAt    time.Time `json:"expires_at"`
-// }
+type RefreshTokenRepository interface {
+	Create(token *model.RefreshToken) error
+	GetByToken(token string) (*model.RefreshToken, error)
+	Revoke(id uuid.UUID) error
+}
 
-// type AuthService interface {
-// 	Register(email, password string) (*UserDTO, error)
-// 	Authenticate(creds Credentials) (*TokenResponse, error)
-// 	Refresh(refreshToken string) (*TokenResponse, error)
-// }
+type UserRepository interface {
+	Create(user *model.User) error
+	GetByID(id uuid.UUID) (*model.User, error)
+	GetByEmail(email string) (*model.User, error)
+}
+
+type AuthService struct {
+	usersRepo  UserRepository
+	tokensRepo RefreshTokenRepository
+	hasher     PasswordHasher
+	jwt        TokenService
+}
+
+func NewAuthService(
+	u UserRepository,
+	t RefreshTokenRepository,
+	h PasswordHasher,
+	j TokenService,
+) *AuthService {
+	return &AuthService{
+		usersRepo:  u,
+		tokensRepo: t,
+		hasher:     h,
+		jwt:        j,
+	}
+}
+
+func (s *AuthService) Register(email, password string) (*dto.UserDTO, error) {
+	hash, err := s.hasher.Hash(password)
+	if err != nil {
+		return nil, err
+	}
+
+	user := &model.User{
+		ID:           uuid.New(),
+		Email:        email,
+		PasswordHash: hash,
+		CreatedAt:    time.Now().UTC(),
+	}
+
+	if err := s.usersRepo.Create(user); err != nil {
+		return nil, err
+	}
+
+	return &dto.UserDTO{
+		ID:    user.ID.String(),
+		Email: user.Email,
+	}, nil
+}
+
+func (s *AuthService) Authenticate(creds dto.Credentials) (*dto.TokenResponse, error) {
+	user, err := s.usersRepo.GetByEmail(creds.Email)
+	if err != nil {
+		return nil, err
+	}
+
+	if !s.hasher.Compare(user.PasswordHash, creds.Password) {
+		return nil, errors.New("invalid credentials")
+	}
+
+	tokens, err := s.jwt.Generate(
+		user.ID.String(),
+		user.Email,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	rt := &model.RefreshToken{
+		ID:        uuid.New(),
+		UserID:    user.ID,
+		Token:     tokens.RefreshToken,
+		ExpiresAt: tokens.ExpiresAt,
+		CreatedAt: time.Now().UTC(),
+		IsRevoked: false,
+	}
+
+	if err := s.tokensRepo.Create(rt); err != nil {
+		return nil, err
+	}
+
+	return &dto.TokenResponse{
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+		ExpiresAt:    tokens.ExpiresAt,
+	}, nil
+}
+
+func (s *AuthService) Refresh(refreshToken string) (*dto.TokenResponse, error) {
+	// 1. ищем refresh token
+	rt, err := s.tokensRepo.GetByToken(refreshToken)
+	if err != nil {
+		return nil, err
+	}
+
+	if rt == nil || rt.IsRevoked || rt.ExpiresAt.Before(time.Now()) {
+		return nil, errors.New("invalid refresh token")
+	}
+
+	user, err := s.usersRepo.GetByID(rt.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, errors.New("user not found")
+	}
+
+	tokens, err := s.jwt.Generate(
+		user.ID.String(),
+		user.Email,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	newRT := &model.RefreshToken{
+		ID:        uuid.New(),
+		UserID:    user.ID,
+		Token:     tokens.RefreshToken,
+		ExpiresAt: tokens.ExpiresAt,
+		CreatedAt: time.Now().UTC(),
+		IsRevoked: false,
+	}
+
+	if err := s.tokensRepo.Create(newRT); err != nil {
+		return nil, err
+	}
+
+	if err := s.tokensRepo.Revoke(rt.ID); err != nil {
+		return nil, err
+	}
+
+	return &dto.TokenResponse{
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+		ExpiresAt:    tokens.ExpiresAt,
+	}, nil
+}

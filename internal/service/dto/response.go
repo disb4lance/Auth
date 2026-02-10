@@ -1,6 +1,9 @@
 package dto
 
-import "time"
+import (
+	"auth-service/internal/pkg/pkg_dto"
+	"time"
+)
 
 // возвращаем клиенту только безопасные поля
 type UserDTO struct {
@@ -10,14 +13,8 @@ type UserDTO struct {
 
 // DTO для ответа после аутентификации
 type AuthenticatedUser struct {
-	User  UserDTO   `json:"user"`
-	Token TokenPair `json:"token"`
-}
-
-type TokenPair struct {
-	AccessToken  string    `json:"access_token"`
-	RefreshToken string    `json:"refresh_token"`
-	ExpiresAt    time.Time `json:"expires_at"`
+	User  UserDTO           `json:"user"`
+	Token pkg_dto.TokenPair `json:"token"`
 }
 
 type TokenResponse struct {
