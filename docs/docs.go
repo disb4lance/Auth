@@ -43,7 +43,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/service.AuthenticatedUser"
+                            "$ref": "#/definitions/dto.AuthenticatedUser"
                         }
                     },
                     "401": {
@@ -83,7 +83,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/service.UserDTO"
+                            "$ref": "#/definitions/dto.TokenResponse"
                         }
                     },
                     "400": {
@@ -123,7 +123,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/service.AuthenticatedUser"
+                            "$ref": "#/definitions/dto.AuthenticatedUser"
                         }
                     },
                     "401": {
@@ -137,6 +137,17 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "dto.AuthenticatedUser": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "$ref": "#/definitions/pkg_dto.TokenPair"
+                },
+                "user": {
+                    "$ref": "#/definitions/dto.UserDTO"
+                }
+            }
+        },
         "dto.LoginRequest": {
             "type": "object",
             "properties": {
@@ -172,21 +183,13 @@ const docTemplate = `{
                 }
             }
         },
-        "service.AuthenticatedUser": {
-            "type": "object",
-            "properties": {
-                "token": {
-                    "$ref": "#/definitions/service.TokenPair"
-                },
-                "user": {
-                    "$ref": "#/definitions/service.UserDTO"
-                }
-            }
-        },
-        "service.TokenPair": {
+        "dto.TokenResponse": {
             "type": "object",
             "properties": {
                 "access_token": {
+                    "type": "string"
+                },
+                "expires_at": {
                     "type": "string"
                 },
                 "refresh_token": {
@@ -194,13 +197,27 @@ const docTemplate = `{
                 }
             }
         },
-        "service.UserDTO": {
+        "dto.UserDTO": {
             "type": "object",
             "properties": {
                 "email": {
                     "type": "string"
                 },
                 "id": {
+                    "type": "string"
+                }
+            }
+        },
+        "pkg_dto.TokenPair": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "refresh_token": {
                     "type": "string"
                 }
             }

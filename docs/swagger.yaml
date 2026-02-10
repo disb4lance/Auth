@@ -1,4 +1,11 @@
 definitions:
+  dto.AuthenticatedUser:
+    properties:
+      token:
+        $ref: '#/definitions/pkg_dto.TokenPair'
+      user:
+        $ref: '#/definitions/dto.UserDTO'
+    type: object
   dto.LoginRequest:
     properties:
       email:
@@ -23,25 +30,29 @@ definitions:
         example: qwerty123
         type: string
     type: object
-  service.AuthenticatedUser:
-    properties:
-      token:
-        $ref: '#/definitions/service.TokenPair'
-      user:
-        $ref: '#/definitions/service.UserDTO'
-    type: object
-  service.TokenPair:
+  dto.TokenResponse:
     properties:
       access_token:
+        type: string
+      expires_at:
         type: string
       refresh_token:
         type: string
     type: object
-  service.UserDTO:
+  dto.UserDTO:
     properties:
       email:
         type: string
       id:
+        type: string
+    type: object
+  pkg_dto.TokenPair:
+    properties:
+      access_token:
+        type: string
+      expires_at:
+        type: string
+      refresh_token:
         type: string
     type: object
 info:
@@ -65,7 +76,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/service.AuthenticatedUser'
+            $ref: '#/definitions/dto.AuthenticatedUser'
         "401":
           description: invalid refresh token
           schema:
@@ -91,7 +102,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/service.UserDTO'
+            $ref: '#/definitions/dto.TokenResponse'
         "400":
           description: invalid body
           schema:
@@ -117,7 +128,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/service.AuthenticatedUser'
+            $ref: '#/definitions/dto.AuthenticatedUser'
         "401":
           description: unauthorized
           schema:

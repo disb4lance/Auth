@@ -19,7 +19,6 @@ func NewRefreshTokenRepository(db *pgxpool.Pool) *RefreshTokenRepository {
 	return &RefreshTokenRepository{db: db}
 }
 
-// Create - сохраняет новый токен
 func (r *RefreshTokenRepository) Create(token *model.RefreshToken) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
