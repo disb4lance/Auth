@@ -1,35 +1,49 @@
 package service
 
 import (
+	model "auth-service/internal/domain/models"
+	"auth-service/internal/service/dto"
 	"errors"
 	"time"
 
 	"github.com/google/uuid"
-
-	model "auth-service/internal/domain/models"
-	"auth-service/internal/repository"
 )
 
-type authService struct {
-	usersRepo  repository.UserRepository
-	tokensRepo repository.RefreshTokenRepository
+type PasswordHasher interface {
+	Hash(password string) (string, error)
+	Compare(hash, password string) bool
+}
+
+type TokenService interface {
+	Generate(userID, email string) (*dto.TokenPair, error)
+}
+
+type RefreshTokenRepository interface {
+	Create(token *model.RefreshToken) error
+	GetByToken(token string) (*model.RefreshToken, error)
+	Revoke(id uuid.UUID) error
+}
+
+type UserRepository interface {
+	Create(user *model.User) error
+	GetByID(id uuid.UUID) (*model.User, error)
+	GetByEmail(email string) (*model.User, error)
+}
+
+type AuthService struct {
+	usersRepo  UserRepository
+	tokensRepo RefreshTokenRepository
 	hasher     PasswordHasher
 	jwt        TokenService
 }
 
-type TokenResponse struct {
-	AccessToken  string    `json:"access_token"`
-	RefreshToken string    `json:"refresh_token"`
-	ExpiresAt    time.Time `json:"expires_at"`
-}
-
 func NewAuthService(
-	u repository.UserRepository,
-	t repository.RefreshTokenRepository,
+	u UserRepository,
+	t RefreshTokenRepository,
 	h PasswordHasher,
 	j TokenService,
-) AuthService {
-	return &authService{
+) *AuthService {
+	return &AuthService{
 		usersRepo:  u,
 		tokensRepo: t,
 		hasher:     h,
@@ -37,7 +51,7 @@ func NewAuthService(
 	}
 }
 
-func (s *authService) Register(email, password string) (*UserDTO, error) {
+func (s *AuthService) Register(email, password string) (*dto.UserDTO, error) {
 	hash, err := s.hasher.Hash(password)
 	if err != nil {
 		return nil, err
@@ -54,13 +68,13 @@ func (s *authService) Register(email, password string) (*UserDTO, error) {
 		return nil, err
 	}
 
-	return &UserDTO{
+	return &dto.UserDTO{
 		ID:    user.ID.String(),
 		Email: user.Email,
 	}, nil
 }
 
-func (s *authService) Authenticate(creds Credentials) (*TokenResponse, error) {
+func (s *AuthService) Authenticate(creds dto.Credentials) (*dto.TokenResponse, error) {
 	user, err := s.usersRepo.GetByEmail(creds.Email)
 	if err != nil {
 		return nil, err
@@ -91,14 +105,14 @@ func (s *authService) Authenticate(creds Credentials) (*TokenResponse, error) {
 		return nil, err
 	}
 
-	return &TokenResponse{
+	return &dto.TokenResponse{
 		AccessToken:  tokens.AccessToken,
 		RefreshToken: tokens.RefreshToken,
 		ExpiresAt:    tokens.ExpiresAt,
 	}, nil
 }
 
-func (s *authService) Refresh(refreshToken string) (*TokenResponse, error) {
+func (s *AuthService) Refresh(refreshToken string) (*dto.TokenResponse, error) {
 	// 1. ищем refresh token
 	rt, err := s.tokensRepo.GetByToken(refreshToken)
 	if err != nil {
@@ -142,7 +156,7 @@ func (s *authService) Refresh(refreshToken string) (*TokenResponse, error) {
 		return nil, err
 	}
 
-	return &TokenResponse{
+	return &dto.TokenResponse{
 		AccessToken:  tokens.AccessToken,
 		RefreshToken: tokens.RefreshToken,
 		ExpiresAt:    tokens.ExpiresAt,

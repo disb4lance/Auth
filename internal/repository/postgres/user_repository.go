@@ -5,7 +5,6 @@ import (
 	"time"
 
 	model "auth-service/internal/domain/models"
-	"auth-service/internal/repository"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -16,7 +15,7 @@ type UserRepository struct {
 	db *pgxpool.Pool
 }
 
-func NewUserRepository(db *pgxpool.Pool) repository.UserRepository {
+func NewUserRepository(db *pgxpool.Pool) *UserRepository {
 	return &UserRepository{db: db}
 }
 

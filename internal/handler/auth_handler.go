@@ -1,17 +1,22 @@
 package handler
 
 import (
-	"auth-service/internal/handler/dto"
-	"auth-service/internal/service"
+	"auth-service/internal/service/dto"
 	"encoding/json"
 	"net/http"
 )
 
-type AuthHandler struct {
-	authService service.AuthService
+type AuthService interface {
+	Register(email, password string) (*dto.UserDTO, error)
+	Authenticate(creds dto.Credentials) (*dto.TokenResponse, error)
+	Refresh(refreshToken string) (*dto.TokenResponse, error)
 }
 
-func NewAuthHandler(s service.AuthService) *AuthHandler {
+type AuthHandler struct {
+	authService AuthService
+}
+
+func NewAuthHandler(s AuthService) *AuthHandler {
 	return &AuthHandler{authService: s}
 }
 
@@ -51,7 +56,7 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param request body dto.LoginRequest true "User credentials"
-// @Success 200 {object} service.AuthenticatedUser
+// @Success 200 {object} dto.AuthenticatedUser
 // @Failure 401 {string} string "unauthorized"
 // @Router /auth/tokens [post]
 func (h *AuthHandler) AuthenticateHandler(w http.ResponseWriter, r *http.Request) {
@@ -62,7 +67,7 @@ func (h *AuthHandler) AuthenticateHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	authUser, err := h.authService.Authenticate(service.Credentials{
+	authUser, err := h.authService.Authenticate(dto.Credentials{
 		Email:    req.Email,
 		Password: req.Password,
 	})
@@ -82,7 +87,7 @@ func (h *AuthHandler) AuthenticateHandler(w http.ResponseWriter, r *http.Request
 // @Accept json
 // @Produce json
 // @Param request body dto.RefreshRequest true "Refresh token"
-// @Success 200 {object} service.AuthenticatedUser
+// @Success 200 {object} dto.AuthenticatedUser
 // @Failure 401 {string} string "invalid refresh token"
 // @Router /auth/refresh [post]
 func (h *AuthHandler) RefreshHandler(w http.ResponseWriter, r *http.Request) {

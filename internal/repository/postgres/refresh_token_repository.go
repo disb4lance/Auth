@@ -9,14 +9,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	model "auth-service/internal/domain/models"
-	"auth-service/internal/repository"
 )
 
 type RefreshTokenRepository struct {
 	db *pgxpool.Pool
 }
 
-func NewRefreshTokenRepository(db *pgxpool.Pool) repository.RefreshTokenRepository {
+func NewRefreshTokenRepository(db *pgxpool.Pool) *RefreshTokenRepository {
 	return &RefreshTokenRepository{db: db}
 }
 
