@@ -7,7 +7,7 @@ import (
 )
 
 type AuthService interface {
-	Register(email, password string) (*dto.UserDTO, error)
+	Register(email, password string) (*dto.TokenResponse, error)
 	Authenticate(creds dto.Credentials) (*dto.TokenResponse, error)
 	Refresh(refreshToken string) (*dto.TokenResponse, error)
 }
@@ -27,7 +27,7 @@ func NewAuthHandler(s AuthService) *AuthHandler {
 // @Accept json
 // @Produce json
 // @Param request body dto.RegisterRequest true "User info"
-// @Success 201 {object} service.UserDTO
+// @Success 201 {object} dto.TokenResponse
 // @Failure 400 {string} string "invalid body"
 // @Router /auth/register [post]
 func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -38,7 +38,7 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userDTO, err := h.authService.Register(req.Email, req.Password)
+	token, err := h.authService.Register(req.Email, req.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -46,7 +46,7 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(userDTO)
+	_ = json.NewEncoder(w).Encode(token)
 }
 
 // AuthenticateHandler godoc

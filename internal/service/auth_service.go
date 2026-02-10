@@ -52,7 +52,7 @@ func NewAuthService(
 	}
 }
 
-func (s *AuthService) Register(email, password string) (*dto.UserDTO, error) {
+func (s *AuthService) Register(email, password string) (*dto.TokenResponse, error) {
 	hash, err := s.hasher.Hash(password)
 	if err != nil {
 		return nil, err
@@ -69,9 +69,31 @@ func (s *AuthService) Register(email, password string) (*dto.UserDTO, error) {
 		return nil, err
 	}
 
-	return &dto.UserDTO{
-		ID:    user.ID.String(),
-		Email: user.Email,
+	tokens, err := s.jwt.Generate(
+		user.ID.String(),
+		user.Email,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	rt := &model.RefreshToken{
+		ID:        uuid.New(),
+		UserID:    user.ID,
+		Token:     tokens.RefreshToken,
+		ExpiresAt: tokens.ExpiresAt,
+		CreatedAt: time.Now().UTC(),
+		IsRevoked: false,
+	}
+
+	if err := s.tokensRepo.Create(rt); err != nil {
+		return nil, err
+	}
+
+	return &dto.TokenResponse{
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+		ExpiresAt:    tokens.ExpiresAt,
 	}, nil
 }
 
@@ -114,7 +136,6 @@ func (s *AuthService) Authenticate(creds dto.Credentials) (*dto.TokenResponse, e
 }
 
 func (s *AuthService) Refresh(refreshToken string) (*dto.TokenResponse, error) {
-	// 1. ищем refresh token
 	rt, err := s.tokensRepo.GetByToken(refreshToken)
 	if err != nil {
 		return nil, err
