@@ -6,6 +6,8 @@ import (
 	"auth-service/internal/pkg/pkg_dto"
 	"auth-service/internal/service/dto"
 	"errors"
+	"io"
+	"log"
 	"testing"
 	"time"
 
@@ -24,11 +26,14 @@ func TestAuthService_Register(t *testing.T) {
 	mockHasher := NewMockPasswordHasher(ctrl)
 	mockJWT := NewMockTokenService(ctrl)
 
+	logger := log.New(io.Discard, "", 0)
+
 	service := NewAuthService(
 		mockUserRepo,
 		mockTokenRepo,
 		mockHasher,
 		mockJWT,
+		logger,
 	)
 
 	email := "test@example.com"
@@ -96,13 +101,15 @@ func TestAuthService_Authenticate(t *testing.T) {
 	mockHasher := NewMockPasswordHasher(ctrl)
 	mockJWT := NewMockTokenService(ctrl)
 
+	logger := log.New(io.Discard, "", 0)
+
 	service := NewAuthService(
 		mockUserRepo,
 		mockTokenRepo,
 		mockHasher,
 		mockJWT,
+		logger,
 	)
-
 	creds := dto.Credentials{
 		Email:    "test@example.com",
 		Password: "password123",
@@ -188,13 +195,15 @@ func TestAuthService_Refresh(t *testing.T) {
 	mockHasher := NewMockPasswordHasher(ctrl)
 	mockJWT := NewMockTokenService(ctrl)
 
+	logger := log.New(io.Discard, "", 0)
+
 	service := NewAuthService(
 		mockUserRepo,
 		mockTokenRepo,
 		mockHasher,
 		mockJWT,
+		logger,
 	)
-
 	refreshToken := "valid_refresh_token"
 	userID := uuid.New()
 	rtID := uuid.New()
