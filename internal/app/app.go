@@ -48,7 +48,7 @@ func New(cfg *config.Config, logger *log.Logger) (*App, error) {
 	jwtSvc := jwt.NewJWTService(cfg.JWTSecret, 15*time.Minute)
 
 	// services
-	authSvc := service.NewAuthService(userRepo, tokenRepo, hasher, jwtSvc)
+	authSvc := service.NewAuthService(userRepo, tokenRepo, hasher, jwtSvc, logger)
 
 	// handlers
 	authHandler := handler.NewAuthHandler(authSvc)
