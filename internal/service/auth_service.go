@@ -5,6 +5,7 @@ import (
 	"auth-service/internal/pkg/pkg_dto"
 	"auth-service/internal/service/dto"
 	"errors"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -36,6 +37,7 @@ type AuthService struct {
 	tokensRepo RefreshTokenRepository
 	hasher     PasswordHasher
 	jwt        TokenService
+	logger     *log.Logger
 }
 
 func NewAuthService(
@@ -43,18 +45,21 @@ func NewAuthService(
 	t RefreshTokenRepository,
 	h PasswordHasher,
 	j TokenService,
+	l *log.Logger,
 ) *AuthService {
 	return &AuthService{
 		usersRepo:  u,
 		tokensRepo: t,
 		hasher:     h,
 		jwt:        j,
+		logger:     l,
 	}
 }
 
 func (s *AuthService) Register(email, password string) (*dto.TokenResponse, error) {
 	hash, err := s.hasher.Hash(password)
 	if err != nil {
+		s.logger.Printf("hash error: %v", err)
 		return nil, err
 	}
 
@@ -66,6 +71,7 @@ func (s *AuthService) Register(email, password string) (*dto.TokenResponse, erro
 	}
 
 	if err := s.usersRepo.Create(user); err != nil {
+		s.logger.Printf("user create failed email=%s err=%v", email, err)
 		return nil, err
 	}
 
@@ -104,6 +110,7 @@ func (s *AuthService) Authenticate(creds dto.Credentials) (*dto.TokenResponse, e
 	}
 
 	if !s.hasher.Compare(user.PasswordHash, creds.Password) {
+		s.logger.Printf("invalid credentials email=%s", creds.Email)
 		return nil, errors.New("invalid credentials")
 	}
 
@@ -142,6 +149,7 @@ func (s *AuthService) Refresh(refreshToken string) (*dto.TokenResponse, error) {
 	}
 
 	if rt == nil || rt.IsRevoked || rt.ExpiresAt.Before(time.Now()) {
+		s.logger.Printf("invalid refresh attempt token=%s", refreshToken)
 		return nil, errors.New("invalid refresh token")
 	}
 

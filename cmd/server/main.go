@@ -21,7 +21,7 @@ func main() {
 		log.Println("no .env file found")
 	}
 
-	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
+	logger := log.New(os.Stdout, "[auth-service] ", log.LstdFlags)
 
 	cfg, err := config.Load()
 	if err != nil {
