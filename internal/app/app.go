@@ -1,38 +1,71 @@
 package app
 
 import (
+	"auth-service/internal/config"
+	"auth-service/internal/handler"
+	"auth-service/internal/infrastructure/jwt"
+	"auth-service/internal/infrastructure/security"
+	"auth-service/internal/repository/postgres"
+	"auth-service/internal/service"
+	transport "auth-service/internal/transport/http"
+	"context"
+	"fmt"
 	"log"
 	"net/http"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type App struct {
-	server *http.Server
+	Server *http.Server
+	DB     *pgxpool.Pool
 }
 
-func New(port string) *App {
-	mux := http.NewServeMux()
+func New(cfg *config.Config, logger *log.Logger) (*App, error) {
+	connString := fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
+		cfg.DB.User,
+		cfg.DB.Password,
+		cfg.DB.Host,
+		cfg.DB.Port,
+		cfg.DB.Name,
+		cfg.DB.SSLMode,
+	)
 
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
+	db, err := pgxpool.New(context.Background(), connString)
+	if err != nil {
+		return nil, err
+	}
 
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
-	})
+	// repositories
+	userRepo := postgres.NewUserRepository(db)
+	tokenRepo := postgres.NewRefreshTokenRepository(db)
 
-	server := &http.Server{
-		Addr:    ":" + port,
-		Handler: mux,
+	// infrastructure
+	hasher := security.NewBcryptHasher(bcrypt.DefaultCost)
+	jwtSvc := jwt.NewJWTService(cfg.JWTSecret, 15*time.Minute)
+
+	// services
+	authSvc := service.NewAuthService(userRepo, tokenRepo, hasher, jwtSvc)
+
+	// handlers
+	authHandler := handler.NewAuthHandler(authSvc)
+
+	// router
+	router := transport.NewRouter(authHandler)
+
+	srv := &http.Server{
+		Addr:         fmt.Sprintf(":%d", cfg.Port),
+		Handler:      router,
+		IdleTimeout:  time.Minute,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 30 * time.Second,
 	}
 
 	return &App{
-		server: server,
-	}
-}
-
-func (a *App) Run() error {
-	log.Println("server started on", a.server.Addr)
-	return a.server.ListenAndServe()
+		Server: srv,
+		DB:     db,
+	}, nil
 }

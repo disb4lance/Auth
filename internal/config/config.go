@@ -1,20 +1,57 @@
 package config
 
 import (
+	"fmt"
 	"os"
+	"strconv"
 )
 
 type Config struct {
-	HTTPPort string
+	Port      int
+	Env       string
+	JWTSecret string
+	DB        DBConfig
 }
 
-func Load() *Config {
-	port := os.Getenv("HTTP_PORT")
-	if port == "" {
-		port = "8080"
+type DBConfig struct {
+	User     string
+	Password string
+	Name     string
+	Host     string
+	Port     string
+	SSLMode  string
+}
+
+func Load() (*Config, error) {
+	port, err := strconv.Atoi(getEnv("PORT", "8080"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid PORT value: %w", err)
 	}
 
-	return &Config{
-		HTTPPort: port,
+	cfg := &Config{
+		Port:      port,
+		Env:       getEnv("ENV", "development"),
+		JWTSecret: getEnv("JWT_SECRET", ""),
+		DB: DBConfig{
+			User:     getEnv("DB_USER", "postgres"),
+			Password: getEnv("DB_PASSWORD", "postgres"),
+			Name:     getEnv("DB_NAME", "postgres"),
+			Host:     getEnv("DB_HOST", "localhost"),
+			Port:     getEnv("DB_PORT", "5432"),
+			SSLMode:  getEnv("DB_SSLMODE", "disable"),
+		},
 	}
+
+	if cfg.JWTSecret == "" {
+		return nil, fmt.Errorf("JWT_SECRET is required")
+	}
+
+	return cfg, nil
+}
+
+func getEnv(key, fallback string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	return fallback
 }

@@ -29,7 +29,7 @@ func NewAuthHandler(s AuthService) *AuthHandler {
 // @Param request body dto.RegisterRequest true "User info"
 // @Success 201 {object} dto.TokenResponse
 // @Failure 400 {string} string "invalid body"
-// @Router /auth/register [post]
+// @Router /api/v1/auth/register [post]
 func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	var req dto.RegisterRequest
 
@@ -58,7 +58,7 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 // @Param request body dto.LoginRequest true "User credentials"
 // @Success 200 {object} dto.AuthenticatedUser
 // @Failure 401 {string} string "unauthorized"
-// @Router /auth/tokens [post]
+// @Router /api/v1/auth/login [post]
 func (h *AuthHandler) AuthenticateHandler(w http.ResponseWriter, r *http.Request) {
 	var req dto.LoginRequest
 
@@ -89,7 +89,7 @@ func (h *AuthHandler) AuthenticateHandler(w http.ResponseWriter, r *http.Request
 // @Param request body dto.RefreshRequest true "Refresh token"
 // @Success 200 {object} dto.AuthenticatedUser
 // @Failure 401 {string} string "invalid refresh token"
-// @Router /auth/refresh [post]
+// @Router /api/v1/auth/refresh [post]
 func (h *AuthHandler) RefreshHandler(w http.ResponseWriter, r *http.Request) {
 	var req dto.RefreshRequest
 
