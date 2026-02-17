@@ -1,79 +1,59 @@
 package main
 
 import (
-	"auth-service/internal/handler"
-	"auth-service/internal/infrastructure/jwt"
-	"auth-service/internal/infrastructure/security"
-	"auth-service/internal/repository/postgres"
-	"auth-service/internal/service"
+	_ "auth-service/docs"
+	"auth-service/internal/app"
+	"auth-service/internal/config"
 	"context"
-	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/joho/godotenv"
 )
 
-const version = "1.0.0"
-
-type config struct {
-	port int
-	env  string
-}
-
-type application struct {
-	config config
-	logger *log.Logger
-}
-
 func main() {
-	var cfg config
-
-	flag.IntVar(&cfg.port, "port", 8080, "API server port") // Изменено на 8080 для соответствия ListenAndServe
-	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
-	flag.Parse()
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("no .env file found")
+	}
 
 	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
 
-	app := &application{
-		config: cfg,
-		logger: logger,
-	}
-
-	ctx := context.Background()
-	db, err := pgxpool.New(ctx, "postgres://myuser:mypassword@localhost:5432/mydatabase?sslmode=disable")
+	cfg, err := config.Load()
 	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-
-	// Репозитории
-	userRepo := postgres.NewUserRepository(db)
-	tokenRepo := postgres.NewRefreshTokenRepository(db)
-	hasher := security.NewBcryptHasher(bcrypt.DefaultCost)
-	jwtSvc := jwt.NewJWTService(
-		"super-secret-key",
-		15*time.Minute,
-	)
-
-	// Сервис
-	authSvc := service.NewAuthService(userRepo, tokenRepo, hasher, jwtSvc)
-
-	// Хендлер
-	authHandler := handler.NewAuthHandler(authSvc)
-
-	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.port),
-		Handler:      app.routes(authHandler),
-		IdleTimeout:  time.Minute,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 30 * time.Second,
+		logger.Fatal(err)
 	}
 
-	logger.Printf("starting %s server on %s", cfg.env, srv.Addr)
-	logger.Fatal(srv.ListenAndServe())
+	application, err := app.New(cfg, logger)
+	if err != nil {
+		logger.Fatal(err)
+	}
+
+	go func() {
+		logger.Printf("starting %s server on %s", cfg.Env, application.Server.Addr)
+		if err := application.Server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal(err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	logger.Println("shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := application.Server.Shutdown(ctx); err != nil {
+		logger.Fatal("server forced to shutdown:", err)
+	}
+
+	application.DB.Close()
+
+	logger.Println("server exiting")
 }

@@ -15,7 +15,47 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/auth/refresh": {
+        "/api/v1/auth/login": {
+            "post": {
+                "description": "Login user and return tokens",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Authenticate user",
+                "parameters": [
+                    {
+                        "description": "User credentials",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.AuthenticatedUser"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/refresh": {
             "post": {
                 "description": "Refresh access and refresh tokens",
                 "consumes": [
@@ -55,7 +95,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/register": {
+        "/api/v1/auth/register": {
             "post": {
                 "description": "Create a new user with email and password",
                 "consumes": [
@@ -88,46 +128,6 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "invalid body",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/tokens": {
-            "post": {
-                "description": "Login user and return tokens",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "auth"
-                ],
-                "summary": "Authenticate user",
-                "parameters": [
-                    {
-                        "description": "User credentials",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dto.LoginRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.AuthenticatedUser"
-                        }
-                    },
-                    "401": {
-                        "description": "unauthorized",
                         "schema": {
                             "type": "string"
                         }
