@@ -37,7 +37,7 @@ func Load() (*Config, error) {
 			Password: getEnv("DB_PASSWORD", "postgres"),
 			Name:     getEnv("DB_NAME", "postgres"),
 			Host:     getEnv("DB_HOST", "localhost"),
-			Port:     getEnv("DB_PORT", "5432"),
+			Port:     getEnv("DB_PORT", "5433"),
 			SSLMode:  getEnv("DB_SSLMODE", "disable"),
 		},
 	}
