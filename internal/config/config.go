@@ -31,11 +31,11 @@ func Load() (*Config, error) {
 	cfg := &Config{
 		Port:      port,
 		Env:       getEnv("ENV", "development"),
-		JWTSecret: getEnv("JWT_SECRET", ""),
+		JWTSecret: getEnv("JWT_SECRET", "k3+Ta<8$9Vc4,*<My|B.=uF6[Tl>S_N)L$+)EHB#XRu"),
 		DB: DBConfig{
 			User:     getEnv("DB_USER", "postgres"),
 			Password: getEnv("DB_PASSWORD", "postgres"),
-			Name:     getEnv("DB_NAME", "postgres"),
+			Name:     getEnv("DB_NAME", "authdb"),
 			Host:     getEnv("DB_HOST", "localhost"),
 			Port:     getEnv("DB_PORT", "5433"),
 			SSLMode:  getEnv("DB_SSLMODE", "disable"),

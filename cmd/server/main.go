@@ -11,16 +11,9 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-
-	"github.com/joho/godotenv"
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Println("no .env file found")
-	}
-
 	logger := log.New(os.Stdout, "[auth-service] ", log.LstdFlags)
 
 	cfg, err := config.Load()
